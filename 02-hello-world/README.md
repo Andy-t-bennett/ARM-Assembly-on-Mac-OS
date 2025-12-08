@@ -120,10 +120,10 @@ You'll probably have a few questions here, and it might already look a little in
 
 ### To break this down:
 
-- In ARM assembly, the `adrp` instruction works with 4KB-aligned addresses (even though macOS uses 16KB memory pages under the hood). **PAGEOFF** is the offset within that 4KB block.
+- The `adrp` instruction works with 4KB-aligned blocks of memory. **PAGEOFF** is the offset within that block.
   - Think of it like this: the entirety of memory (RAM) is a book, our `.data` section is a chapter, and `hello_world` is a sentence on a page.
-- **`adrp`** gets us to the right "neighborhood" (a 4KB-aligned block) where `hello_world` lives
-- **`add`** adds the offset to get the exact byte within that block, or in a way, the exact "sentence" on that page.
+- **`adrp`** gets us to the right "neighborhood" (the 4KB block) where `hello_world` lives
+- **`add`** adds the offset to get the exact byte within that block - the exact "sentence" on that page.
 - Together they pinpoint the exact memory location!
 
 Just planting the seed of this knowledge now, we'll circle back on this in the memory chapter!
@@ -161,25 +161,8 @@ _start:
 
 **`mov x2, #14`**
 - This sets the value of "14" in register `x2`
-- Why 14? Well this register is going to store the amount of bytes we want to print to the terminal
-- And we know it's 14 because "Hello, World!\n" breaks out to:
-
-```
- 1. H
- 2. e
- 3. l
- 4. l
- 5. o
- 6. ,
- 7. (space)
- 8. W
- 9. o
-10. r
-11. l
-12. d
-13. !
-14. \n
-```
+- Why 14? This register stores the number of bytes we want to print
+- "Hello, World!\n" = 13 characters + 1 newline (`\n`) = 14 bytes total
 
 **`mov x16, #4`**
 - Tells OS we are going to be making a system call for writing/printing (syscall #4)
