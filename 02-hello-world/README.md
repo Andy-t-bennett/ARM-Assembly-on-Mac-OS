@@ -5,7 +5,6 @@
 - How to structure an ARM assembly program
 - Making your first syscall (printing to terminal)
 - How to properly exit a program
-- The build process (assembler + linker)
 
 ---
 
