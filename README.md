@@ -51,3 +51,10 @@ Found a bug or want to improve something? Contributions are welcome! This is a l
 ## License
 
 MIT - Learn freely, share freely
+
+
+
+
+
+SIDE NOTES:
+- Pure assembly and no c librabry
