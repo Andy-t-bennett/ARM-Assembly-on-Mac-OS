@@ -16,7 +16,7 @@ So let's dive into this step by step. Some of these instructions and conventions
 
 ## Setting Up the Entry Point
 
-To start, ARM requires we set a `.global` label for the `_start` (or the entry point of our code). The global keyword allows the linker to see where the code actually starts. Think of global as setting a function to public.
+To start, we need to set a `.global` directive so the linker can see where our code starts. The global keyword makes `_start` visible to the linker - think of it like setting a function to public.
 
 ```asm
 .global _start
@@ -44,7 +44,7 @@ hello_world: .ascii "Hello, World!\n"
 ```
 
 Let's break this down:
-- **`.data`** is an assembler directive that tells the operating system we are declaring variables and need to allocate some space in storage. Because we are creating the string with a predefined value, the OS knows exactly how much space is needed.
+- **`.data`** is an assembler directive that tells the assembler to place the following data in the data section of the program. Because we are creating the string with a predefined value, the assembler knows exactly how much space is needed.
 - **`hello_world:`** is the variable name (typically in snake_case)
 - **`.ascii`** is the data type
 - **`"Hello, World!\n"`** is the value, `\n` is being added to make it print a little cleaner in the terminal
@@ -53,7 +53,7 @@ Let's break this down:
 
 ## The Code Section
 
-Now that we've set up our entry point, and created a new variable to print out, we need to tell the OS where our code ACTUALLY starts. We do this with the .text directive, which marks the beginning of the code section.
+Now that we've set up our entry point, and created a new variable to print out, we need to tell the assembler where our code ACTUALLY starts. We do this with the `.text` directive, which marks the beginning of the code section.
 
 ```asm
 .global _start
@@ -64,19 +64,19 @@ hello_world: .ascii "Hello, World!\n"
 .text
 ```
 
-What will happen here is the OS will allocate space in memory to hold all the assembly code. We'll touch more on memory in a later chapter so don't think you have to understand this now, just know, these directives serve a purpose for the OS.
+What will happen here is the assembler will place all the assembly instructions in the text section. When the program runs, the OS will load this section into memory as executable code. We'll touch more on memory in a later chapter so don't think you have to understand this now, just know, these directives tell the assembler how to organize your program.
 
 ---
 
 ## Alignment
 
-The last directive before our _start function is:
+The last directive helps with performance and compatibility:
 
 ```asm
 .align 2
 ```
 
-This isn't required but is good practice. `.align 2` means align to 2² = 4 bytes, which matches ARM's instruction size (all ARM instructions are 4 bytes). This keeps everything neatly aligned in memory. Don't think too deeply on this yet, just food for thought.
+This isn't required but is good practice. `.align 2` means align to 2² = 4 bytes, which matches ARM's instruction size (all ARM instructions are 4 bytes). This keeps everything neatly aligned in memory for optimal performance. We'll dive deeper into alignment in the memory chapter.
 
 ---
 
@@ -96,7 +96,7 @@ hello_world: .ascii "Hello, World!\n"
 _start:
 ```
 
-It's good to think about what we are trying to accomplish before we get started. The main goal is to print the value from our variable `hello_world` ("Hello, World!\n"). We know that since we created the variable in the `.data` section, the OS automatically added it into memory for us, so all we need to do is find it! But how do we do that?
+It's good to think about what we are trying to accomplish before we get started. The main goal is to print the value from our variable `hello_world` ("Hello, World!\n"). We know that since we created the variable in the `.data` section, the linker placed it in memory and the OS loads it when the program runs, so all we need to do is find its address! But how do we do that?
 
 ---
 
@@ -120,21 +120,19 @@ You'll probably have a few questions here, and it might already look a little in
 
 ### To break this down:
 
-- In ARM assembly, a **PAGE** is a fixed block of memory. The values can range for how large or small these blocks are, but in macOS, a PAGE is 16KB. **PAGEOFF** is a way to find a specific location of data in a PAGE (or block of memory).
+- In ARM assembly, the `adrp` instruction works with 4KB-aligned addresses (even though macOS uses 16KB memory pages under the hood). **PAGEOFF** is the offset within that 4KB block.
   - Think of it like this: the entirety of memory (RAM) is a book, our `.data` section is a chapter, and `hello_world` is a sentence on a page.
-- **`adrp`** gets us to the right "page" (a 16KB block) where `hello_world` lives
-- **`add`** adds the offset to get the exact byte within that page, or in a way, the "sentance" on that page.
+- **`adrp`** gets us to the right "neighborhood" (a 4KB-aligned block) where `hello_world` lives
+- **`add`** adds the offset to get the exact byte within that block, or in a way, the exact "sentence" on that page.
 - Together they pinpoint the exact memory location!
 
-*(If you're curious about the technical details of how this works with PC-relative addressing, we'll dive deeper in the memory chapter!)*
-
-Just planting the seed of this knowledge now, we'll circle back on this.
+Just planting the seed of this knowledge now, we'll circle back on this in the memory chapter!
 
 ---
 
 ## Making the System Call
 
-Now that we've stored the address of the `hello_world` variable, we can use a **System call** to print it to the terminal! System calls are OS specific, so how we use a system call on macOS could be different to how Linux might handle it, even if both are using ARM. This is because system calls live at the OS level.
+Now that we've stored the address of the `hello_world` variable, we can use a **System call** to print it to the terminal! System calls are OS specific, so how we use a system call on macOS could be different to how Linux might handle it, even if both are using ARM.
 
 ```asm
 .global _start
@@ -158,31 +156,35 @@ _start:
 ### Let's go line by line:
 
 **`mov x0, #1`**
-- This sets the value of "1" in the register `x0`
-- Telling the OS we want to perform an stdout, aka print to the terminal
+- This sets register `x0` to 1, which is the **file descriptor** for stdout (the terminal)
+- Other file descriptors: 0=stdin (keyboard input), 2=stderr (error output), 3+=files
 
 **`mov x2, #14`**
 - This sets the value of "14" in register `x2`
 - Why 14? Well this register is going to store the amount of bytes we want to print to the terminal
 - And we know it's 14 because "Hello, World!\n" breaks out to:
-  1.  H
-  2.  e
-  3.  l
-  4.  l
-  5.  o
-  6.  ,
-  7.  (space)
-  8.  W
-  9.  o
-  10. r
-  11. l
-  12. d
-  13. !
-  14. \n
+
+```
+ 1. H
+ 2. e
+ 3. l
+ 4. l
+ 5. o
+ 6. ,
+ 7. (space)
+ 8. W
+ 9. o
+10. r
+11. l
+12. d
+13. !
+14. \n
+```
 
 **`mov x16, #4`**
-- Tells OS we are going to be making a system call for printing to the terminal, so go ahead and check registers `x0`, `x1`, and `x2`
-- **macOS specific**: The use of register X16 as the marker for what system call to use is macOS specific, Linux for example uses register X8
+- Tells OS we are going to be making a system call for writing/printing (syscall #4)
+- **macOS specific**: The use of register X16 as the syscall number is macOS specific, Linux uses register X8
+- Think of X16 as saying "which function to call" (write, read, exit, etc.) and the other registers (x0, x1, x2) as the arguments to that function
 
 **`svc #0x80`**
 - **Supervisor call** - tells OS to trigger the system call denoted in register X16
@@ -193,7 +195,7 @@ _start:
 
 ## Exiting the Program
 
-At this point, we've done everything to run our program! But we're not done yet, now we just need to end it properly.
+At this point, we've done everything to run our program! Congrats! But we're not done yet, now we just need to end it properly.
 
 ```asm
 .global _start
@@ -251,3 +253,43 @@ Hello, World!
 ```
 
 You did it! It might feel like this is all gibberish and doesn't make sense, but it doesn't have to yet. You wrote a program in assembly, and that's an achievement! Hopefully this got you interested and hungry to learn more!
+
+---
+
+## What Just Happened?
+
+When you ran those commands:
+
+1. **`as`** - The **assembler** converted your `.s` file into machine code (`.o` object file)
+2. **`ld`** - The **linker** created an executable, linking in macOS system libraries
+   - `-lSystem` = link with macOS system library (provides syscall interface)
+   - `-syslibroot` = tells linker where to find macOS SDK
+   - `-e _start` = sets entry point to `_start`
+   - `-arch arm64` = specifies ARM64 architecture
+3. **`./hello_world`** - Ran your program!
+
+---
+
+## Experiments to Try
+
+Want to understand it better? Try these:
+
+- Change "Hello, World!" to your name - remember to update `x2` with the new byte count!
+- Remove the `\n` - what happens?
+- Change `mov x0, #0` to `mov x0, #1` in the exit code - check the exit status with `echo $?` after running
+- Try changing `x0` from `#1` to `#2` in the write syscall - this writes to stderr instead of stdout!
+
+---
+
+## Common Errors
+
+- **"Bad CPU type"**: You're probably on an Intel Mac - this only works on Apple Silicon
+- **Segmentation fault**: Check your byte count in `x2` - it should match your string length exactly
+- **Nothing prints**: Did you forget the write syscall? Check that `x0=#1`, `x16=#4`
+- **"Undefined symbols"**: Make sure you have `.global _start` and the linker flag `-e _start`
+
+---
+
+## Next Steps
+
+Feeling confident? Head to [**03-registers/**](../03-registers/) to learn what all those `x0`, `x1`, `x16` registers really mean and how to use them effectively!
