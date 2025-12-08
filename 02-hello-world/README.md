@@ -22,7 +22,7 @@ To start, we need to set a `.global` directive so the linker can see where our c
 .global _start
 ```
 
-**Why "_" before the start?** It's not a requirement but it is a convention used by macOS, that makes Assembly more compatible with higher languages like C and their compilers. It's a good habit to use "_start", and it'll make your life a little easier later.
+**Why the "_" before start?** It's a macOS convention that makes assembly code compatible with C and other higher-level languages. Using `_start` is good practice and will save you headaches when you start mixing assembly with C code later!
 
 ---
 
